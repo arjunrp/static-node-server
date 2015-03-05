@@ -1,0 +1,16 @@
+{
+  "name": "node-express-server",
+  "version": "0.0.1",
+  "description": "http server on current folder",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Arjun RP",
+  "license": "ISC",
+  "dependencies":{
+	  "express":"4.12.2",
+	  "send":"",
+	  "url":""
+  }
+}
