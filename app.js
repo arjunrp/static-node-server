@@ -13,13 +13,22 @@ var app = express(),
 
 
 
-function getDirectoryListing(files){
-	var response = "<html><head><title>Index of</title></head><body><style>table{font-size:17px;margin-top:30px;margin-bottom:30px}th,td{text-align:left;padding:5px;padding-left:15px;padding-right:15px;}</style><div><div><h2>Index of /</h2></div><hr/><table><tr><th></th><th>Name</th><th>Last Modified</th><th>Size</th></tr>";
+function getDirectoryListing(files,location){
+	var response = '<html><head><title>Index of /'+location+'</title></head><body><style>table{font-size:17px;margin-top:30px;margin-bottom:30px}th,td{text-align:left;padding:5px;padding-left:15px;padding-right:15px;}</style><div><div><h2>Index of /'+location+'</h2></div><hr/><table><tr><th></th><th>Name</th><th>Last Modified</th><th>Size</th></tr>';
+	if(location===''){
+		location = '.';
+	}
+	else{
+		response+='<tr><td></td><td><a href="../">Parent Directory/</a></td><td>--</td><td>--</td></tr>';
+	}
 
 	for(var i in files){
-				response+='<tr><td></td><td>'+files[i].filename+'</td><td>'+files[i].time+'</td><td>'+files[i].size+'</td></tr>';
+				if(files[i].directory===true){
+					files[i].filename+='/';
+				}
+				response+='<tr><td></td><td><a href="/'+location+'/'+files[i].filename+'">'+files[i].filename+'</a></td><td>'+files[i].time+'</td><td>'+files[i].size+'</td></tr>';
 			}
-			response+="</table><hr/><div style='text-align:center'>via <a target='_blank' href='http://arjunrp.github.io/node-server'>node-server</a></div></div></body></html>";
+			response+="</table><hr/><div style='text-align:center'>via <a target='_blank' href='arjunrp.github.io/node-server'>node-server</a></div></div></body></html>";
 
 	return response;
 }
@@ -35,11 +44,8 @@ function trimSlash(str){
 
 }
 var listDirectory = function(req,res,callback){
-	//res.send('Showing contents of '+req.path+"--"+req.url);
-
-	var location = path.join(__dirname,ROOT_DIR,trimSlash(req.url));
-
-
+	folder = trimSlash(req.url);
+	var location = path.join(__dirname,ROOT_DIR,folder);
 	fs.readdir(location,function(err,files){
 		if(err){
 			callback(err,null);
@@ -58,48 +64,39 @@ var listDirectory = function(req,res,callback){
 				}
 			});
 
-			callback(null,getDirectoryListing(files));
+			callback(null,getDirectoryListing(files,folder));
 		}
 	});
 };
 
 app.use(ROOT,function(req,res,next){
-
-	if(req.path==='/' && LIST_DIR===true ){
-		//listDirectory(req,res);
-		//res.end("show dir listing");
-	}
-
-
-	//path = 'static\\'+path;
-
-
-
 	var stream = send(req,req.url,{root:ROOT_DIR,index:false});
-
 	stream.on('error',function(err){
 		if(err.code==='ENOENT'){
 			next();
 		}
-		//console.log(err);
-	});
-	stream.on('directory',function(){
+	})
+	.on('directory',function(){
 		listDirectory(req,res,function(err,response){
 			if(err){}
 			res.send(response);
 		});
-	});
-
-
-	stream.pipe(res);
+	})
+	.pipe(res);
 });
-/*
-app.use('/static',express.static(PUBLIC,{index:'index.js'}));
 
-*/
+app.use(ROOT,function(err,req,res,next){
+	if(err.code=403){
+		res.status(400).send('---');
+	}
+
+	//next();
+})
+
+/*
 app.use('*',function(req,res){
 	res.statusCode=404;
 	res.end('--NOT FOUND--');
 });
-
+*/
 app.listen(APP_PORT);
