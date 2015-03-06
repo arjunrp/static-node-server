@@ -1,19 +1,24 @@
 /*jslint node:true*/
 var express = require('express'),
-	serveStatic = require('serve-static'),
 	path = require('path'),
 	send = require('send'),
 	fs = require('fs');
 
 var app = express(),
-	config={};
-
-	config.port = 7733,
-	LIST_DIR = true,
-	ROOT = '/',
-	ROOT_DIR = 'static';
-
-
+	serverConfig={
+		port : 7733,
+		root : '/',
+		rootDir : 'static'
+	},
+	dirConfig={
+		listDir : true,
+		dotFiles :'deny',
+		index : false,
+		etag : true,
+		extensions : ['html','htm'],
+		lastModified : true,
+		maxAge : 0
+	};
 
 function getDirectoryListing(files,location){
 	var response = '<html><head><title>Index of /'+location+'</title></head><body><style>table{font-size:17px;margin-top:30px;margin-bottom:30px}th,td{text-align:left;padding:5px;padding-left:15px;padding-right:15px;}</style><div><div><h1>Index of /'+location+'</h1></div><table><tr><th></th><th>Name</th><th>Last Modified</th><th>Size</th></tr>';
@@ -21,12 +26,13 @@ function getDirectoryListing(files,location){
 		location = '.';
 	}
 	else{
-		response+='<tr><td></td><td><a href="../">Parent Directory/</a></td><td>--</td><td>--</td></tr>';
+		response+='<tr><td></td><td><a href="../">Parent Directory/</a></td><td>-</td><td>-</td></tr>';
 	}
 
 	for(var i in files){
 				if(files[i].directory===true){
 					files[i].filename+='/';
+					files[i].size='-';
 				}
 				response+='<tr><td></td><td><a href="/'+location+'/'+files[i].filename+'">'+files[i].filename+'</a></td><td>'+files[i].time+'</td><td>'+files[i].size+'</td></tr>';
 			}
@@ -64,7 +70,7 @@ function trimSlash(str){
 }
 var listDirectory = function(req,res,callback){
 	folder = trimSlash(req.url);
-	var location = path.join(__dirname,ROOT_DIR,folder);
+	var location = path.join(__dirname,serverConfig.rootDir,folder);
 	fs.readdir(location,function(err,files){
 		if(err){
 			callback(err,null);
@@ -88,8 +94,16 @@ var listDirectory = function(req,res,callback){
 	});
 };
 
-app.use(ROOT,function(req,res,next){
-	var stream = send(req,req.url,{root:ROOT_DIR,index:false});
+app.use(serverConfig.root,function(req,res,next){
+	var stream = send(req,req.url,{
+		root : serverConfig.rootDir,
+		index : dirConfig.index,
+		dotfiles : dirConfig.dotFiles,
+		etag : dirConfig.etag,
+		extensions : dirConfig.extensions,
+		lastModified : dirConfig.lastModified,
+		maxAge : dirConfig.maxAge
+	});
 	stream.on('error',function(err){
 		if(err.code==='ENOENT'){
 			err.status = 500;
@@ -101,10 +115,17 @@ app.use(ROOT,function(req,res,next){
 		}
 	})
 	.on('directory',function(){
-		listDirectory(req,res,function(err,response){
-			if(err){next(err)}
-			res.send(response);
-		});
+		if(dirConfig.listDir===true){
+			listDirectory(req,res,function(err,response){
+				if(err){next(err)}
+				res.send(response);
+			});
+		}
+		else{
+			err = new Error();
+			err.status=403;
+			next(err);
+		}
 	})
 	.pipe(res);
 })
@@ -113,4 +134,4 @@ app.use(ROOT,function(req,res,next){
 	res.send(errorTemplate(err.status,req.url));
 });
 
-app.listen(APP_PORT);
+app.listen(serverConfig.port);
