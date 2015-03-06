@@ -3,14 +3,21 @@
   "version": "0.0.1",
   "description": "http server on current folder",
   "main": "app.js",
+  "dependencies":{
+	  "express":"4.12.2",
+	  "send":"0.12.1",
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Arjun RP",
-  "license": "ISC",
-  "dependencies":{
-	  "express":"4.12.2",
-	  "send":"",
-	  "url":""
-  }
+  "author":{
+	  "name":"Arjun RP",
+	  "email":"arj.arjun@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "static",
+    "file",
+    "server"
+  ]
 }
