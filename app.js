@@ -5,38 +5,38 @@ var express = require('express'),
 	fs = require('fs');
 
 var app = express(),
-	serverConfig={
+	serverConfig = {
 		port : 7733,
 		root : '/',
 		rootDir : 'static'
 	},
-	dirConfig={
+	dirConfig = {
 		listDir : true,
-		dotFiles :'deny',
-		index : false,
+		dotFiles : 'allow',
+		index : true,
 		etag : true,
-		extensions : ['html','htm'],
+		extensions : ['html', 'htm'],
 		lastModified : true,
 		maxAge : 0
 	};
 
-function getDirectoryListing(files,location){
-	var response = '<html><head><title>Index of /'+location+'</title></head><body><style>table{font-size:17px;margin-top:30px;margin-bottom:30px}th,td{text-align:left;padding:5px;padding-left:15px;padding-right:15px;}</style><div><div><h1>Index of /'+location+'</h1></div><table><tr><th></th><th>Name</th><th>Last Modified</th><th>Size</th></tr>';
-	if(location===''){
+function getDirectoryListing(files, location) {
+	var response = '<html><head><title>Index of /' + location + '</title></head><body><style>table{font-size:17px;margin-top:30px;margin-bottom:30px}th,td{text-align:left;padding:5px;padding-left:15px;padding-right:15px;}</style><div><div><h1>Index of /' + location + '</h1></div><table><tr><th></th><th>Name</th><th>Last Modified</th><th>Size</th></tr>';
+	if (location === ''){
 		location = '.';
 	}
 	else{
-		response+='<tr><td></td><td><a href="../">Parent Directory/</a></td><td>-</td><td>-</td></tr>';
+		response += '<tr><td></td><td><a href="../">Parent Directory/</a></td><td>-</td><td>-</td></tr>';
 	}
 
 	for(var i in files){
-				if(files[i].directory===true){
-					files[i].filename+='/';
-					files[i].size='-';
+				if(files[i].directory === true){
+					files[i].filename += '/';
+					files[i].size = '-';
 				}
-				response+='<tr><td></td><td><a href="/'+location+'/'+files[i].filename+'">'+files[i].filename+'</a></td><td>'+files[i].time+'</td><td>'+files[i].size+'</td></tr>';
+				response += '<tr><td></td><td><a href="/'+location+'/'+files[i].filename+'">'+files[i].filename+'</a></td><td>'+files[i].time+'</td><td>'+files[i].size+'</td></tr>';
 			}
-			response+='</table><hr/><div style="text-align:center">via <a target="_blank" href="http://arjunrp.github.io/static-node-server">static-node-server</a></div></div></body></html>';
+			response += '</table><hr/><div style="text-align:center">via <a target="_blank" href="http://arjunrp.github.io/static-node-server">static-node-server</a></div></div></body></html>';
 
 	return response;
 }
@@ -95,6 +95,7 @@ var listDirectory = function(req,res,callback){
 };
 
 app.use(serverConfig.root,function(req,res,next){
+	/* Add option for directory wise configuration files as '.json' */
 	var stream = send(req,req.url,{
 		root : serverConfig.rootDir,
 		index : dirConfig.index,
@@ -115,7 +116,7 @@ app.use(serverConfig.root,function(req,res,next){
 		}
 	})
 	.on('directory',function(){
-		if(dirConfig.listDir===true){
+		if(dirConfig.index===true){
 			listDirectory(req,res,function(err,response){
 				if(err){next(err)}
 				res.send(response);
@@ -132,6 +133,12 @@ app.use(serverConfig.root,function(req,res,next){
 .use(function(err,req,res,next){
 	res.statusCode = err.status||500;
 	res.send(errorTemplate(err.status,req.url));
+})
+.use('*', function(req,res){
+	res.statusCode = 404;
+	res.send(errorTemplate(404,req.url));
 });
+
+
 
 app.listen(serverConfig.port);
