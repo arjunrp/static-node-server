@@ -6,7 +6,9 @@ var express = require('express'),
 	fs = require('fs');
 
 var app = express(),
-	APP_PORT = 7733,
+	config={};
+
+	config.port = 7733,
 	LIST_DIR = true,
 	ROOT = '/',
 	ROOT_DIR = 'static';
@@ -14,7 +16,7 @@ var app = express(),
 
 
 function getDirectoryListing(files,location){
-	var response = '<html><head><title>Index of /'+location+'</title></head><body><style>table{font-size:17px;margin-top:30px;margin-bottom:30px}th,td{text-align:left;padding:5px;padding-left:15px;padding-right:15px;}</style><div><div><h2>Index of /'+location+'</h2></div><hr/><table><tr><th></th><th>Name</th><th>Last Modified</th><th>Size</th></tr>';
+	var response = '<html><head><title>Index of /'+location+'</title></head><body><style>table{font-size:17px;margin-top:30px;margin-bottom:30px}th,td{text-align:left;padding:5px;padding-left:15px;padding-right:15px;}</style><div><div><h1>Index of /'+location+'</h1></div><table><tr><th></th><th>Name</th><th>Last Modified</th><th>Size</th></tr>';
 	if(location===''){
 		location = '.';
 	}
@@ -28,8 +30,25 @@ function getDirectoryListing(files,location){
 				}
 				response+='<tr><td></td><td><a href="/'+location+'/'+files[i].filename+'">'+files[i].filename+'</a></td><td>'+files[i].time+'</td><td>'+files[i].size+'</td></tr>';
 			}
-			response+="</table><hr/><div style='text-align:center'>via <a target='_blank' href='arjunrp.github.io/node-server'>node-server</a></div></div></body></html>";
+			response+='</table><hr/><div style="text-align:center">via <a target="_blank" href="http://arjunrp.github.io/static-node-server">static-node-server</a></div></div></body></html>';
 
+	return response;
+}
+function errorTemplate(statusCode,url){
+	var response = '<html><head><title>';
+	switch(statusCode){
+			case 404:{
+				response+='404 Not Found</title><body><div><div><h1>Not found</h1></div><div style="padding-top:15px;padding-bottom:20px;">The requested URL '+url+' was not found on this server.</div><hr/><div style="text-align:center">via <a target="_blank" href="http://arjunrp.github.io/static-node-server">static-node-server</a></div></div></body></html>';
+				break;
+			}
+			case 403:{
+				response+='403 Forbidden</title><body><div><div><h1>Forbidden</h1></div><div style="padding-top:15px;padding-bottom:20px;">You don\'t have permission to access '+url+' on this server.</div><hr/><div style="text-align:center">via <a target="_blank" href="http://arjunrp.github.io/static-node-server">static-node-server</a></div></div></body></html>';
+				break;
+			}
+			default:{
+				response+='500 Internal Server Error</title><body><div><div><h1>Internal Server Error</h1></div><div style="padding-top:15px;padding-bottom:20px;">The server encountered an internal error and was unable to complete your request.</div><hr/><div style="text-align:center">via <a target="_blank" href="http://arjunrp.github.io/static-node-server">static-node-server</a></div></div></body></html>';
+			}
+	}
 	return response;
 }
 function trimSlash(str){
@@ -73,30 +92,25 @@ app.use(ROOT,function(req,res,next){
 	var stream = send(req,req.url,{root:ROOT_DIR,index:false});
 	stream.on('error',function(err){
 		if(err.code==='ENOENT'){
-			next();
+			err.status = 500;
+			err.message = 'File Not Found';
+			next(err);
+		}
+		else{
+			next(err);
 		}
 	})
 	.on('directory',function(){
 		listDirectory(req,res,function(err,response){
-			if(err){}
+			if(err){next(err)}
 			res.send(response);
 		});
 	})
 	.pipe(res);
-});
-
-app.use(ROOT,function(err,req,res,next){
-	if(err.code=403){
-		res.status(400).send('---');
-	}
-
-	//next();
 })
-
-/*
-app.use('*',function(req,res){
-	res.statusCode=404;
-	res.end('--NOT FOUND--');
+.use(function(err,req,res,next){
+	res.statusCode = err.status||500;
+	res.send(errorTemplate(err.status,req.url));
 });
-*/
+
 app.listen(APP_PORT);
