@@ -68,10 +68,7 @@ function trimSlash(str){
 	return str;
 
 }
-function getDirectoryConfig(url){
 
-
-}
 var listDirectory = function(req,res,callback){
 	folder = trimSlash(req.url);
 	var location = path.join(__dirname,serverConfig.rootDir,folder);
@@ -98,10 +95,7 @@ var listDirectory = function(req,res,callback){
 	});
 };
 
-app.use(serverConfig.root,function(req,res,next){
-	/* Add option for directory wise configuration files as '.json' */
-
-	url = req.url+"";
+var getConfig = function(req,url,process){
 	var file = (serverConfig.rootDir)+(url.substr(0,url.lastIndexOf('/')))+"/.dirConfig";
 	fs.exists(file,function(result){
 		if(result===true){
@@ -110,9 +104,41 @@ app.use(serverConfig.root,function(req,res,next){
 					throw err;
 				}
 				else{
-						data = JSON.parse(data);
+						try{
+							data = JSON.parse(data);
+							process(null,data,req);
+						}
+						catch(e){
+							var err = new Error("dirconfig parse error");
+							process(err,null,req);
+						}
 				}
 			});
+		}
+		else{
+			if(url=='/'){
+				console.log('No dirconfig found');
+			}
+			else{
+				url = url.substr(0,url.lastIndexOf('/',url.length-2))+"/";
+				getConfig(req,url,process);
+			}
+		}
+	});
+
+};
+
+app.use(serverConfig.root,function(req,res,next){
+	/* Add option for directory wise configuration files as '.json' */
+
+
+	var url = req.url+"";
+	getConfig(req,url,function(err,data,req){
+		if(err){
+			next(err);
+		}
+		else{
+			console.log(data,req.url);
 		}
 	});
 
@@ -153,6 +179,8 @@ app.use(serverConfig.root,function(req,res,next){
 		}
 	})
 	.pipe(res);
+
+
 })
 .use(function(err,req,res){
 	res.statusCode = err.status||500;
