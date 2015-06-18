@@ -13,7 +13,7 @@ var app = express(),
 	dirConfig = {
 		listDir : true,
 		dotFiles : 'allow',
-		index : true,
+		index :false,
 		etag : true,
 		extensions : ['html', 'htm'],
 		lastModified : true,
@@ -68,6 +68,10 @@ function trimSlash(str){
 	return str;
 
 }
+function getDirectoryConfig(url){
+
+
+}
 var listDirectory = function(req,res,callback){
 	folder = trimSlash(req.url);
 	var location = path.join(__dirname,serverConfig.rootDir,folder);
@@ -96,6 +100,24 @@ var listDirectory = function(req,res,callback){
 
 app.use(serverConfig.root,function(req,res,next){
 	/* Add option for directory wise configuration files as '.json' */
+
+	url = req.url+"";
+	var file = (serverConfig.rootDir)+(url.substr(0,url.lastIndexOf('/')))+"/.dirConfig";
+	fs.exists(file,function(result){
+		if(result===true){
+			fs.readFile(file,function(err,data){
+				if(err){
+					throw err;
+				}
+				else{
+						data = JSON.parse(data);
+				}
+			});
+		}
+	});
+
+
+
 	var stream = send(req,req.url,{
 		root : serverConfig.rootDir,
 		index : dirConfig.index,
@@ -105,9 +127,11 @@ app.use(serverConfig.root,function(req,res,next){
 		lastModified : dirConfig.lastModified,
 		maxAge : dirConfig.maxAge
 	});
+
+
 	stream.on('error',function(err){
 		if(err.code==='ENOENT'){
-			err.status = 500;
+			err.status = 404;
 			err.message = 'File Not Found';
 			next(err);
 		}
@@ -116,7 +140,7 @@ app.use(serverConfig.root,function(req,res,next){
 		}
 	})
 	.on('directory',function(){
-		if(dirConfig.index===true){
+		if(dirConfig.listDir===true){
 			listDirectory(req,res,function(err,response){
 				if(err){next(err)}
 				res.send(response);
@@ -130,7 +154,7 @@ app.use(serverConfig.root,function(req,res,next){
 	})
 	.pipe(res);
 })
-.use(function(err,req,res,next){
+.use(function(err,req,res){
 	res.statusCode = err.status||500;
 	res.send(errorTemplate(err.status,req.url));
 })
@@ -139,6 +163,12 @@ app.use(serverConfig.root,function(req,res,next){
 	res.send(errorTemplate(404,req.url));
 });
 
+app.listen(serverConfig.port,function(err){
+	if(err){
+		console.log('error listening to port '+serverConfig.port);
+	}
+	else{
+		console.log('static-node-server live on port '+serverConfig.port);
+	}
 
-
-app.listen(serverConfig.port);
+});
