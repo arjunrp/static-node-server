@@ -6,7 +6,7 @@ var express = require('express'),
 
 var app = express(),
 	serverConfig = {
-		port : 7733,
+		port : 7733
 		root : '/',
 		rootDir : 'static'
 	},
